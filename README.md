@@ -15,7 +15,7 @@ Simple server for [this client](https://github.com/vldF/fedClient)
 | account.getOwnInfo  | token: String, nick: String  | Returns User's object (JSON with fields: id: Int, nick: String, token: String)  |
 | users.getUserId  |  token: String, nick: String, userid: Int  |  Returns User's ID. `userid` is ID of user, that send this requests |
 
-#Registration
+# Registration
 1. Client send account.register with `nick` parameter. 
 2. If this nickname exist on server, error will return. Else, `token` will return. Client should to save this `token`
 
