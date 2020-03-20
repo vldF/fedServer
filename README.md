@@ -13,9 +13,9 @@ Simple server for [this client](https://github.com/vldF/fedClient)
 |  messages.getLast | userid: Int, by: Int, token: String, last_time: Long  | Returns all message, that was sent since `last_time` |
 | account.register  | nick: String  | Registers new account with `nick`. Returns token of this account. Token couldn't got using other methods (you can't restore that)  |
 | account.getOwnInfo  | token: String, nick: String  | Returns User's object (JSON with fields: id: Int, nick: String, token: String)  |
-| users.getUserId  |  token: String, nick: String  |  Returns User's ID. Like `account.getOwnInfo`, but returns one field (`id`) |
+| users.getUserId  |  token: String, nick: String, userid: Int  |  Returns User's ID. `userid` is ID of user, that send this requests |
 
-#Registration
+# Registration
 1. Client send account.register with `nick` parameter. 
 2. If this nickname exist on server, error will return. Else, `token` will return. Client should to save this `token`
 
