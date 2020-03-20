@@ -76,7 +76,7 @@ internal class MainTest {
 
     private fun messageSendAndGetLast() {
         val rnd = generateToken()
-        val respSend = doGet("message.send", mapOf(
+        val respSend = doGet("messages.send", mapOf(
             "sender" to userId,
             "receiver" to userId,
             "message" to "test$rnd",
@@ -85,7 +85,7 @@ internal class MainTest {
 
         Assert.assertTrue(respSend.has("status") && respSend["status"].asString == "ok")
 
-        val respGet = doGet("message.get", mapOf(
+        val respGet = doGet("messages.get", mapOf(
             "userid" to userId,
             "by" to userId,
             "token" to userToken

@@ -25,7 +25,7 @@ import kotlin.system.exitProcess
 class Main(vararg args: String) {
     private var port = -1
 
-    @Option(name = "--databaseDebug", aliases = ["-dd"], usage = "Set exposed debug mod\n-dd [true]")
+    @Option(name = "--databaseDebug", aliases = ["-dd", "-d"], usage = "Set exposed debug mod\n-dd [true]")
     private var debugParam = "false"
 
     private val gsonParser = Gson()
@@ -57,7 +57,7 @@ class Main(vararg args: String) {
                     call.respond(mapOf("status" to "pong!"))
                 }
 
-                get("message.send") {
+                get("messages.send") {
                     val state = isResponseCorrect(call.parameters, listOf("sender", "receiver", "message", "token"))
                     if (state.isNotEmpty())
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
@@ -82,7 +82,7 @@ class Main(vararg args: String) {
                     call.respond(mapOf("status" to "ok"))
                 }
 
-                get("message.get") {
+                get("messages.get") {
                     val state = isResponseCorrect(call.parameters, listOf("userid", "by", "token"))
                     if (state.isNotEmpty())
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
@@ -113,7 +113,7 @@ class Main(vararg args: String) {
                     val lastTime = call.parameters["last_time"]!!.toLong()
                     val token = call.parameters["token"].toString()
 
-                    if(!isUserExist(sender, token))
+                    if(!isUserExist(receiver, token))
                         call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "user token or nick incorrect"))
 
                     val msgList = database.dbQuery {
@@ -182,15 +182,21 @@ class Main(vararg args: String) {
                 }
 
                 get("users.getUserId") {
-                    val state = isResponseCorrect(call.parameters, listOf("nick", "token"))
+                    val state = isResponseCorrect(call.parameters, listOf("userid", "token", "nick"))
                     if (state.isNotEmpty())
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
 
                     val nickName = call.parameters["nick"]!!.toString()
+                    val userid = call.parameters["userid"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
 
+                    if (!isUserExist(userid, token)) {
+                        call.respond(mapOf("status" to "error"))
+                        return@get
+                    }
+
                     val user = database.dbQuery {
-                        Users.select { (Users.nick eq nickName) and (Users.token eq token) }.singleOrNull()?.toUser()
+                        Users.select { (Users.nick eq nickName) }.singleOrNull()?.toUser()
                     }
 
                     if (user == null) {
@@ -222,7 +228,7 @@ class Main(vararg args: String) {
 
     private fun isResponseCorrect(params: Parameters, fields: List<String>): String {
         for (f in fields) {
-            if (!params.contains(f) && params[f]!!.isNotEmpty()) return "Parameter $f is incorrect"
+            if (params[f] == null || params[f]!!.isEmpty()) return "Parameter $f is incorrect"
         }
         return ""
     }
