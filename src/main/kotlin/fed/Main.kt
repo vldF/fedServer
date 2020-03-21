@@ -22,6 +22,9 @@ import java.io.File
 import java.util.*
 import kotlin.system.exitProcess
 
+/**
+ * Main class for server app.
+ */
 class Main(vararg args: String) {
     private var port = -1
 
@@ -56,7 +59,7 @@ class Main(vararg args: String) {
                 get("ping") {
                     call.respond(mapOf("status" to "pong!"))
                 }
-
+                
                 get("messages.send") {
                     val state = isResponseCorrect(call.parameters, listOf("sender", "receiver", "message", "token"))
                     if (state.isNotEmpty())
