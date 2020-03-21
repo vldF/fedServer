@@ -16,7 +16,15 @@ Simple server for [this client](https://github.com/vldF/fedClient)
 | users.getUserId  |  token: String, nick: String, userid: Int  |  Returns User's ID. `userid` is ID of user, that send this requests |
 
 # Registration
-1. Client send account.register with `nick` parameter. 
-2. If this nickname exist on server, error will return. Else, `token` will return. Client should to save this `token`
+1. Client send `account.register` request with one parameter: `nick`. 
+2. If this nickname exist on server, error will return. Else, `token` field will return. Client should to save this `token`.
 
-Task #2 for Peter the Great Polytech, St. Petersburg
+# Setup
+1. Install database. In Ubuntu: `sudo apt-get install postgresql`. After that, you should to create database structure. Use the `database.sql` for this. Do not forget to create custom user!
+2. `git clone https://github.com/vldF/fedServer`.
+3. Configure the `config.properties`.
+4. Start the server. 
+
+You can use `--databaseDebug true` (or `-dd true`, `-d true`) to enable additional debuging.
+
+Task #2 for Peter the Great Polytechnic University, St. Petersburg
