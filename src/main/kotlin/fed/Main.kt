@@ -25,28 +25,16 @@ import kotlin.system.exitProcess
 /**
  * Main class for server app.
  */
-class Main(vararg args: String) {
+class Main() {
     private var port = -1
 
-    @Option(name = "--databaseDebug", aliases = ["-dd", "-d"], usage = "Set exposed debug mod\n-dd [true]")
-    private var debugParam = "false"
-
     private val gsonParser = Gson()
-    private val database = DataBaseFactory(debugParam == "true")
+    private val database = DataBaseFactory()
 
     init {
         val properties = Properties()
         properties.load(File("config.properties").reader())
         port = properties.getProperty("port", "35309").toInt()
-
-        val parser = CmdLineParser(this)
-        try {
-            parser.parseArgument(*args)
-        } catch (e: CmdLineException) {
-            System.err.println("Argument parsing error")
-            e.printStackTrace()
-            exitProcess(1)
-        }
     }
 
     fun main() {
@@ -59,7 +47,7 @@ class Main(vararg args: String) {
                 get("ping") {
                     call.respond(mapOf("status" to "pong!"))
                 }
-                
+
                 get("messages.send") {
                     val state = isResponseCorrect(call.parameters, listOf("sender", "receiver", "message", "token"))
                     if (state.isNotEmpty())
@@ -237,6 +225,6 @@ class Main(vararg args: String) {
     }
 }
 
-fun main(args: Array<out String>) {
-    Main(*args).main()
+fun main() {
+    Main().main()
 }

@@ -33,17 +33,17 @@ internal class MainTest {
         val properties = Properties()
         properties.load(File("config.properties").reader())
         serverPort = properties.getProperty("port")?.toInt() ?: throw IllegalStateException()
-        main(arrayOf())
+        main()
     }
 
     @Test
     fun testAll() {
         isServerAlive()
         register()
-        getUsersId()
+        getOwnInfo()
         val time = System.currentTimeMillis()
         messageSendAndGetLast()
-        getOwnInfo()
+        getUserId()
         getLast(time)
     }
 
@@ -65,13 +65,25 @@ internal class MainTest {
         Assert.assertTrue(userToken.isNotEmpty())
     }
 
-    private fun getUsersId() {
-        val resp = doGet("users.getUserId", mapOf(
+    private fun getOwnInfo() {
+        val resp = doGet("account.getOwnInfo", mapOf(
             "nick" to userName,
             "token" to userToken
         ))
         Assert.assertTrue(resp.has("id"))
         userId = resp["id"].asInt
+
+        Assert.assertEquals(userName, resp["nick"].asString)
+        Assert.assertEquals(userToken, resp["token"].asString)
+    }
+
+    private fun getUserId() {
+        val resp = doGet("users.getUserId", mapOf(
+            "nick" to userName,
+            "token" to userToken,
+            "userid" to userId
+        ))
+        Assert.assertEquals(userId, resp["id"].asInt)
     }
 
     private fun messageSendAndGetLast() {
@@ -97,16 +109,6 @@ internal class MainTest {
         message = "test$rnd"
     }
 
-    private fun getOwnInfo() {
-        val resp = doGet("account.getOwnInfo", mapOf(
-            "token" to userToken,
-            "nick" to userName
-        ))
-
-        Assert.assertEquals(userName, resp["nick"].asString)
-        Assert.assertEquals(userId, resp["id"].asInt)
-        Assert.assertEquals(userToken, resp["token"].asString)
-    }
 
     private fun getLast(lastTime: Long) {
         val resp = doGet("messages.getLast", mapOf(

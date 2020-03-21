@@ -10,8 +10,9 @@ import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.util.*
+import javax.sql.DataSource
 
-class DataBaseFactory(private val debugParam: Boolean) {
+class DataBaseFactory() {
     private var url: String
     private var password: String
     private var user: String
@@ -26,7 +27,7 @@ class DataBaseFactory(private val debugParam: Boolean) {
         Database.connect(hikari())
     }
 
-    private fun hikari(): HikariDataSource {
+    private fun hikari(): DataSource {
         val conf = HikariConfig()
         conf.jdbcUrl = url
         conf.username = user
@@ -39,7 +40,6 @@ class DataBaseFactory(private val debugParam: Boolean) {
 
     suspend fun <T> dbQuery(block: () -> T): T = withContext(Dispatchers.IO) {
         transaction {
-            if (debugParam) addLogger(StdOutSqlLogger)
             block()
         }
     }
