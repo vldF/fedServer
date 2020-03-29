@@ -6,4 +6,5 @@ dist: trusty
 jdk: oraclejdk8
 
 script:
+  - chmad 777 ./gradlew
   - ./gradlew fatJar
