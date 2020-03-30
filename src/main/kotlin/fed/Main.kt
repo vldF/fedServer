@@ -21,7 +21,7 @@ import java.util.*
 /**
  * Main class for server app.
  */
-class Main() {
+class Main {
     private var port = -1
 
     private val gsonParser = Gson()
@@ -57,7 +57,7 @@ class Main() {
                     val token = call.parameters["token"]!!.toString()
 
                     if(!isUserExist(senderId, token))
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to true, "description" to "user token or nick incorrect"))
+                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
 
                     database.dbQuery {
                         Messages.insert {
@@ -65,7 +65,6 @@ class Main() {
                             it[receiver] = receiverId
                             it[message] = messageStr
                             it[time] = System.currentTimeMillis()
-                            it[senderNick] = Users.select { Users.id eq senderId }.first().toUser().nick
                         }
                     }
                     call.respond(mapOf("status" to "ok"))
@@ -81,15 +80,15 @@ class Main() {
                     val token = call.parameters["token"]!!.toString()
 
                     if(!isUserExist(senderId, token))
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "user token or nick incorrect"))
+                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
 
                     val msgList = database.dbQuery {
-                        Messages.select {
-                            (Messages.receiver eq userId) or
-                                    (Messages.sender eq senderId)
+                        (Messages innerJoin Users).select {
+                            ((Messages.receiver eq userId) and (Messages.sender eq senderId) or
+                                    (Messages.receiver eq senderId) and (Messages.sender eq userId))
                         }.map { it.toMessage() }
                     }
-                    call.respond("{\"data\": ${gsonParser.toJson(msgList)}}")
+                    call.respond("data" to gsonParser.toJson(msgList))
                 }
 
                 get("messages.getLast") {
@@ -103,7 +102,7 @@ class Main() {
                     val token = call.parameters["token"].toString()
 
                     if(!isUserExist(receiver, token))
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "user token or nick incorrect"))
+                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
 
                     val msgList = database.dbQuery {
                         exposedLogger
@@ -113,7 +112,7 @@ class Main() {
                                     (Messages.time.greater(lastTime))
                         }.map { it.toMessage() }
                     }
-                    call.respond("{\"data\": ${gsonParser.toJson(msgList)}}")
+                    call.respond("data" to gsonParser.toJson(msgList))
                 }
 
                 get("account.register") {
@@ -125,7 +124,7 @@ class Main() {
 
                     // is account exist?
                     if (isUserNameExist(nickName)) {
-                        call.respond(mapOf("status" to "error"))
+                        call.respond(USER_ALREADY_EXIST)
                         return@get
                     }
 
@@ -163,7 +162,7 @@ class Main() {
                     }
 
                     if (user == null) {
-                        call.respond(HttpStatusCode.Unauthorized, "error")
+                        call.respond(HttpStatusCode.Unauthorized, USER_NOT_FOUND)
                     } else {
                         call.respond(gsonParser.toJson(user))
                     }
@@ -180,7 +179,7 @@ class Main() {
                     val token = call.parameters["token"]!!.toString()
 
                     if (!isUserExist(userid, token)) {
-                        call.respond(mapOf("status" to "error"))
+                        call.respond(USER_NOT_FOUND)
                         return@get
                     }
 
@@ -189,7 +188,7 @@ class Main() {
                     }
 
                     if (user == null) {
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "user doesn't exist"))
+                        call.respond(HttpStatusCode.Unauthorized, USER_NOT_FOUND)
                     } else {
                         call.respond("{\"id\": ${user.id}}")
                     }

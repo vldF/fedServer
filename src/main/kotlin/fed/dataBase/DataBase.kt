@@ -10,8 +10,8 @@ fun ResultRow.toUser() = User(
 
 fun ResultRow.toMessage() = Message(
     this[Messages.sender],
-    this[Messages.senderNick],
     this[Messages.receiver],
+    this[Users.nick],
     this[Messages.message],
     this[Messages.time]
 )
