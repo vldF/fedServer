@@ -1,10 +1,10 @@
 package fed
 
-import com.google.gson.Gson
 import fed.dataBase.*
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
+import io.ktor.features.StatusPages
 import io.ktor.gson.gson
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
@@ -16,14 +16,13 @@ import io.ktor.server.netty.Netty
 import org.jetbrains.exposed.sql.*
 import java.io.File
 import java.util.*
+import kotlin.system.exitProcess
 
 /**
  * Main class for server app.
  */
 class Main {
     private var port = -1
-
-    private val gsonParser = Gson()
     private val database = DataBaseFactory()
 
     init {
@@ -38,6 +37,11 @@ class Main {
         val server = embeddedServer(Netty, port = port) {
             install(ContentNegotiation) {
                 gson {
+                }
+            }
+            install(StatusPages) {
+                status(HttpStatusCode.NotFound) {
+                    call.respond(mapOf("error" to true, "description" to "Unknown method"))
                 }
             }
             routing {
@@ -55,7 +59,7 @@ class Main {
                     val messageStr = call.parameters["message"].toString()
                     val token = call.parameters["token"]!!.toString()
 
-                    if(isUserTokenExist(token)) {
+                    if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
                         return@get
                     }
@@ -81,7 +85,7 @@ class Main {
                     val senderId = call.parameters["by"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
 
-                    if(isUserTokenExist(token)) {
+                    if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
                         return@get
                     }
@@ -93,16 +97,16 @@ class Main {
                                     (Messages.receiver eq senderId) and (Messages.sender eq userId))
                         }.map { it.toMessage() }
                     }
-                    call.respond("data" to gsonParser.toJson(msgList))
+                    call.respond(mapOf("data" to msgList))
                 }
 
                 get("messages.getLast") {
-                    val state = isResponseCorrect(call.parameters, listOf("userid", "by", "token", "last_time"))
+                    val state = isResponseCorrect(call.parameters, listOf("receiver", "token", "last_time"))
                     if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
-                    val receiver = call.parameters["userid"]!!.toInt()
+                    val receiver = call.parameters["receiver"]!!.toInt()
                     val lastTime = call.parameters["last_time"]!!.toLong()
                     val token = call.parameters["token"].toString()
 
@@ -113,13 +117,13 @@ class Main {
 
                     val msgList = database.dbQuery {
                         val sender = Users.select { Users.token eq token }.single()[Users.id]
-                        Messages.select {
+                        (Messages innerJoin Users).select {
                             (((Messages.receiver eq receiver) and (Messages.sender eq sender)) or
                                     ((Messages.sender eq receiver) and (Messages.receiver eq sender))) and
                                     (Messages.time.greater(lastTime))
                         }.map { it.toMessage() }
                     }
-                    call.respond("data" to gsonParser.toJson(msgList))
+                    call.respond(mapOf("data" to msgList))
                 }
 
                 get("account.register") {
@@ -140,10 +144,10 @@ class Main {
                     var tokenStr: String
                     while (true) {
                         tokenStr = generateToken()
-                        val usersFromDB = database.dbQuery {
-                            Users.select { Users.token eq tokenStr }
+                        val usersIsEmpty = database.dbQuery {
+                            Users.select { Users.token eq tokenStr }.empty()
                         }
-                        if (usersFromDB.empty())
+                        if (usersIsEmpty)
                             break
                     }
 
@@ -178,7 +182,7 @@ class Main {
                     if (user == null) {
                         call.respond(HttpStatusCode.Unauthorized, USER_NOT_FOUND)
                     } else {
-                        call.respond("{\"id\": ${user.id}}")
+                        call.respond(mapOf("id" to user.id))
                     }
 
                 }
@@ -187,19 +191,26 @@ class Main {
         server.start()
         println("server is ready!")
         println("port $port")
+        while (true) {
+            val inp = readLine()
+            if (inp == "stop") {
+                println("Shutting down server...")
+                exitProcess(0)
+            }
+        }
 
     }
 
     private suspend fun isUserTokenExist(token: String): Boolean {
         return !database.dbQuery {
-            Users.select { Users.token eq token }
-        }.empty()
+            Users.select { Users.token eq token }.empty()
+        }
     }
 
     private suspend fun isUserNameExist(userName: String): Boolean {
         return !database.dbQuery {
-            Users.select { Users.nick eq userName }
-        }.empty()
+            Users.select { Users.nick eq userName }.empty()
+        }
     }
 
     private fun isResponseCorrect(params: Parameters, fields: Collection<String>): String {

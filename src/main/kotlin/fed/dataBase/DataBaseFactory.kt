@@ -5,18 +5,19 @@ import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SqlLogger
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.util.*
+import java.util.logging.Logger
 import javax.sql.DataSource
 
 class DataBaseFactory() {
     private var url: String
     private var password: String
     private var user: String
+    private val logger = Logger.getLogger("database")
 
     init {
         val properties = Properties()
