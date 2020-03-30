@@ -10,7 +10,7 @@ internal class MainTest {
     private lateinit var userName: String
     private lateinit var userToken: String
     private lateinit var message: String
-    private lateinit var req: Request
+    private var req: Request
 
     init {
         val properties = Properties()
