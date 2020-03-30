@@ -1,7 +1,6 @@
 package fed
 
 import kotlin.random.Random
-import kotlin.random.nextInt
 
 const val tokenLen = 32
 

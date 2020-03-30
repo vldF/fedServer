@@ -15,12 +15,8 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
-import org.kohsuke.args4j.CmdLineException
-import org.kohsuke.args4j.CmdLineParser
-import org.kohsuke.args4j.Option
 import java.io.File
 import java.util.*
-import kotlin.system.exitProcess
 
 /**
  * Main class for server app.
