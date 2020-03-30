@@ -29,7 +29,9 @@ class Main() {
 
     init {
         val properties = Properties()
-        properties.load(File("config.properties").reader())
+        File("config.properties").reader().use {
+            properties.load(it)
+        }
         port = properties.getProperty("port", "35309").toInt()
     }
 
