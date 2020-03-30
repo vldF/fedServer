@@ -13,7 +13,6 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import java.io.File
 import java.util.*
@@ -47,22 +46,23 @@ class Main {
                 }
 
                 get("messages.send") {
-                    val state = isResponseCorrect(call.parameters, listOf("sender", "receiver", "message", "token"))
+                    val state = isResponseCorrect(call.parameters, listOf("receiver", "message", "token"))
                     if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
-                    val senderId = call.parameters["sender"]!!.toInt()
                     val receiverId = call.parameters["receiver"]!!.toInt()
                     val messageStr = call.parameters["message"].toString()
                     val token = call.parameters["token"]!!.toString()
 
-                    if(!isUserExist(senderId, token))
-                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
+                    if(isUserTokenExist(token)) {
+                        call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
+                        return@get
+                    }
 
                     database.dbQuery {
                         Messages.insert {
-                            it[sender] = senderId
+                            it[sender] = Users.select { Users.token eq token }.single().toUser().id
                             it[receiver] = receiverId
                             it[message] = messageStr
                             it[time] = System.currentTimeMillis()
@@ -72,20 +72,23 @@ class Main {
                 }
 
                 get("messages.get") {
-                    val state = isResponseCorrect(call.parameters, listOf("userid", "by", "token"))
+                    val state = isResponseCorrect(call.parameters, listOf("by", "token"))
                     if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
-                    val userId = call.parameters["userid"]!!.toInt()
+
                     val senderId = call.parameters["by"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
 
-                    if(!isUserExist(senderId, token))
-                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
+                    if(isUserTokenExist(token)) {
+                        call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
+                        return@get
+                    }
 
                     val msgList = database.dbQuery {
                         (Messages innerJoin Users).select {
+                            val userId = Users.select { Users.token eq token }.single()[Users.id]
                             ((Messages.receiver eq userId) and (Messages.sender eq senderId) or
                                     (Messages.receiver eq senderId) and (Messages.sender eq userId))
                         }.map { it.toMessage() }
@@ -99,16 +102,17 @@ class Main {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
-                    val sender = call.parameters["by"]!!.toInt()
                     val receiver = call.parameters["userid"]!!.toInt()
                     val lastTime = call.parameters["last_time"]!!.toLong()
                     val token = call.parameters["token"].toString()
 
-                    if(!isUserExist(receiver, token))
-                        call.respond(HttpStatusCode.Unauthorized, NICK_OR_TOKEN_INCORRECT)
+                    if(!isUserTokenExist(token)) {
+                        call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
+                        return@get
+                    }
 
                     val msgList = database.dbQuery {
-                        exposedLogger
+                        val sender = Users.select { Users.token eq token }.single()[Users.id]
                         Messages.select {
                             (((Messages.receiver eq receiver) and (Messages.sender eq sender)) or
                                     ((Messages.sender eq receiver) and (Messages.receiver eq sender))) and
@@ -153,42 +157,17 @@ class Main {
                     call.respond(mapOf("status" to "ok", "token" to tokenStr))
                 }
 
-                get("account.getOwnInfo") {
+                get("users.getUserId") {
                     val state = isResponseCorrect(call.parameters, listOf("token", "nick"))
                     if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
-
-                    val token = call.parameters["token"].toString()
-                    val nickName = call.parameters["nick"].toString()
-
-                    val user = database.dbQuery {
-                        Users.select {
-                            (Users.nick eq nickName) and (Users.token eq token)
-                        }.singleOrNull()?.toUser()
-                    }
-
-                    if (user == null) {
-                        call.respond(HttpStatusCode.Unauthorized, USER_NOT_FOUND)
-                    } else {
-                        call.respond(gsonParser.toJson(user))
-                    }
-
-                }
-
-                get("users.getUserId") {
-                    val state = isResponseCorrect(call.parameters, listOf("userid", "token", "nick"))
-                    if (state.isNotEmpty()) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-                        return@get
-                    }
                     val nickName = call.parameters["nick"]!!.toString()
-                    val userid = call.parameters["userid"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
 
-                    if (!isUserExist(userid, token)) {
-                        call.respond(USER_NOT_FOUND)
+                    if (!isUserTokenExist(token)) {
+                        call.respond(TOKEN_INCORRECT)
                         return@get
                     }
 
@@ -211,16 +190,16 @@ class Main {
 
     }
 
-    private suspend fun isUserExist(userId: Int, token: String): Boolean {
-        return database.dbQuery {
-            Users.select { (Users.id eq userId) and (Users.token eq token) }.singleOrNull()?.toUser()
-        } != null
+    private suspend fun isUserTokenExist(token: String): Boolean {
+        return !database.dbQuery {
+            Users.select { Users.token eq token }
+        }.empty()
     }
 
     private suspend fun isUserNameExist(userName: String): Boolean {
-        return database.dbQuery {
-            Users.select { Users.nick eq userName }.singleOrNull()?.toUser()
-        } != null
+        return !database.dbQuery {
+            Users.select { Users.nick eq userName }
+        }.empty()
     }
 
     private fun isResponseCorrect(params: Parameters, fields: Collection<String>): String {
