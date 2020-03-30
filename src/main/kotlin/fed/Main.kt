@@ -48,9 +48,10 @@ class Main {
 
                 get("messages.send") {
                     val state = isResponseCorrect(call.parameters, listOf("sender", "receiver", "message", "token"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-
+                        return@get
+                    }
                     val senderId = call.parameters["sender"]!!.toInt()
                     val receiverId = call.parameters["receiver"]!!.toInt()
                     val messageStr = call.parameters["message"].toString()
@@ -72,9 +73,10 @@ class Main {
 
                 get("messages.get") {
                     val state = isResponseCorrect(call.parameters, listOf("userid", "by", "token"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-
+                        return@get
+                    }
                     val userId = call.parameters["userid"]!!.toInt()
                     val senderId = call.parameters["by"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
@@ -93,9 +95,10 @@ class Main {
 
                 get("messages.getLast") {
                     val state = isResponseCorrect(call.parameters, listOf("userid", "by", "token", "last_time"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-
+                        return@get
+                    }
                     val sender = call.parameters["by"]!!.toInt()
                     val receiver = call.parameters["userid"]!!.toInt()
                     val lastTime = call.parameters["last_time"]!!.toLong()
@@ -117,9 +120,10 @@ class Main {
 
                 get("account.register") {
                     val state = isResponseCorrect(call.parameters, listOf("nick"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-
+                        return@get
+                    }
                     val nickName = call.parameters["nick"]!!.toString()
 
                     // is account exist?
@@ -128,29 +132,33 @@ class Main {
                         return@get
                     }
 
+                    // getting new unique token
                     var tokenStr: String
-                    while (true)
-                        try {
-                            tokenStr = generateToken()
-                            database.dbQuery {
-                                Users.insert {
-                                    it[nick] = nickName
-                                    it[token] = tokenStr
-                                }
-                            }
-                            break
-                        } catch (e: ExposedSQLException) {
-                            // one of unique values repeats
-                            e.printStackTrace()
-                            continue
+                    while (true) {
+                        tokenStr = generateToken()
+                        val usersFromDB = database.dbQuery {
+                            Users.select { Users.token eq tokenStr }
                         }
+                        if (usersFromDB.empty())
+                            break
+                    }
+
+                    database.dbQuery {
+                        Users.insert {
+                            it[nick] = nickName
+                            it[token] = tokenStr
+                        }
+                    }
+
                     call.respond(mapOf("status" to "ok", "token" to tokenStr))
                 }
 
                 get("account.getOwnInfo") {
                     val state = isResponseCorrect(call.parameters, listOf("token", "nick"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
+                        return@get
+                    }
 
                     val token = call.parameters["token"].toString()
                     val nickName = call.parameters["nick"].toString()
@@ -171,9 +179,10 @@ class Main {
 
                 get("users.getUserId") {
                     val state = isResponseCorrect(call.parameters, listOf("userid", "token", "nick"))
-                    if (state.isNotEmpty())
+                    if (state.isNotEmpty()) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
-
+                        return@get
+                    }
                     val nickName = call.parameters["nick"]!!.toString()
                     val userid = call.parameters["userid"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
@@ -214,7 +223,7 @@ class Main {
         } != null
     }
 
-    private fun isResponseCorrect(params: Parameters, fields: List<String>): String {
+    private fun isResponseCorrect(params: Parameters, fields: Collection<String>): String {
         for (f in fields) {
             if (params[f] == null || params[f]!!.isEmpty()) return "Parameter $f is incorrect"
         }
