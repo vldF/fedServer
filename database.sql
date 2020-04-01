@@ -2,8 +2,7 @@ CREATE TABLE messages (
     sender integer,
     receiver integer,
     message text,
-    "time" bigint,
-    sender_nick text
+    "time" bigint
 );
 
 CREATE SEQUENCE user_id_seq
