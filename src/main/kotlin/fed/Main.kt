@@ -208,14 +208,6 @@ class Main {
         server.start()
         println("server is ready!")
         println("port $port")
-        while (true) {
-            val inp = readLine()
-            if (inp == "stop") {
-                println("Shutting down server...")
-                exitProcess(0)
-            }
-        }
-
     }
 
     private suspend fun isUserTokenExist(token: String): Boolean {
@@ -240,4 +232,11 @@ class Main {
 
 fun main() {
     Main().main()
+    while (true) {
+        val inp = readLine()
+        if (inp == "stop") {
+            println("Shutting down server...")
+            exitProcess(0)
+        }
+    }
 }

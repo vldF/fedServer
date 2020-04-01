@@ -1,6 +1,7 @@
 package fed
 
-import org.junit.*
+import org.junit.Assert
+import org.junit.Test
 import java.io.File
 import java.util.*
 
@@ -16,7 +17,7 @@ internal class MainTest {
         val properties = Properties()
         properties.load(File("config.properties").reader())
         serverPort = properties.getProperty("port")?.toInt() ?: throw IllegalStateException()
-        main()
+        Main().main()
 
         req = Request(serverPort)
     }

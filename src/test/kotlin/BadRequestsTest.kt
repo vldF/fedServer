@@ -8,9 +8,8 @@ class BadRequestsTest {
     private val req = Request()
 
     companion object {
-        @BeforeClass @JvmStatic fun init() {
-            main()
-        }
+        @BeforeClass
+        @JvmStatic fun init() = Main().main()
     }
 
     @Test
