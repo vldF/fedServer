@@ -13,7 +13,10 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.select
 import java.io.File
 import java.util.*
 import kotlin.system.exitProcess
@@ -59,6 +62,11 @@ class Main {
                     val messageStr = call.parameters["message"].toString()
                     val token = call.parameters["token"]!!.toString()
 
+                    if (receiverId <= 0) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "receiver can't be negative"))
+                        return@get
+                    }
+
                     if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
                         return@get
@@ -89,6 +97,10 @@ class Main {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
                         return@get
                     }
+                    if (senderId <= 0) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "by can't be negative"))
+                        return@get
+                    }
 
                     val msgList = database.dbQuery {
                         (Messages innerJoin Users).select {
@@ -112,6 +124,11 @@ class Main {
 
                     if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
+                        return@get
+                    }
+
+                    if (receiver <= 0) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "receiver can't be negative"))
                         return@get
                     }
 
