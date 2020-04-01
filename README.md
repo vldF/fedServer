@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/vldF/fedServer.svg?branch=master)](https://travis-ci.com/vldF/fedServer)
 # fedServer
 Simple server for [this client](https://github.com/vldF/fedClient)
 1. Simple
