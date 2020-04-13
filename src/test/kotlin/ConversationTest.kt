@@ -3,6 +3,7 @@ package fed
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import ru.vldf.fed.Api
 
 class ConversationTest {
     private fun createUser(): String = System.currentTimeMillis().toString()
@@ -22,15 +23,15 @@ class ConversationTest {
         apiFirst = Api(userFirst, "localhost")
         apiSecond = Api(userSecond, "localhost")
 
-        val secondId = apiFirst.getUserId(userSecond)["id"].asInt
-        val firstId = apiSecond.getUserId(userFirst)["id"].asInt
+        val secondId = apiFirst.getUserId(userSecond)
+        val firstId = apiSecond.getUserId(userFirst)
         val randomMessage = System.currentTimeMillis().toString()
         apiFirst.messageSend(secondId, randomMessage)
 
 
         val messages = apiSecond.getLastMessages(firstId, 0)
 
-        Assert.assertTrue(messages.has("data") && messages["data"].asJsonArray.size() != 0)
-        Assert.assertTrue(messages["data"].asJsonArray.any{ it.asJsonObject["message"].asString == randomMessage })
+        Assert.assertTrue(messages.isNotEmpty())
+        Assert.assertTrue(messages.any{ it.message == randomMessage })
     }
 }
