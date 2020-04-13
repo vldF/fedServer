@@ -13,13 +13,13 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.select
 import java.io.File
 import java.util.*
-import kotlin.system.exitProcess
 
 /**
  * Main class for server app.
@@ -27,17 +27,21 @@ import kotlin.system.exitProcess
 class Main {
     private var port = -1
     private val database = DataBaseFactory()
+    private lateinit var server: NettyApplicationEngine
 
     init {
         val properties = Properties()
-        File("config.properties").reader().use {
-            properties.load(it)
-        }
+
+        val propertiesFile = File("config.properties")
+        val reader = propertiesFile.reader()
+        properties.load(reader)
+        reader.close()
+
         port = properties.getProperty("port", "35309").toInt()
     }
 
     fun main() {
-        val server = embeddedServer(Netty, port = port) {
+        server = embeddedServer(Netty, port = port) {
             install(ContentNegotiation) {
                 gson {
                 }
@@ -58,14 +62,13 @@ class Main {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
+                    if (!isUserIdCorrect(call.parameters["receiver"]!!)){
+                        call.respond(HttpStatusCode.BadRequest, USERID_INVALID)
+                        return@get
+                    }
                     val receiverId = call.parameters["receiver"]!!.toInt()
                     val messageStr = call.parameters["message"].toString()
                     val token = call.parameters["token"]!!.toString()
-
-                    if (receiverId <= 0) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "receiver can't be negative"))
-                        return@get
-                    }
 
                     if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
@@ -90,15 +93,16 @@ class Main {
                         return@get
                     }
 
+                    if (!isUserIdCorrect(call.parameters["by"]!!)){
+                        call.respond(HttpStatusCode.BadRequest, USERID_INVALID)
+                        return@get
+                    }
+
                     val senderId = call.parameters["by"]!!.toInt()
                     val token = call.parameters["token"]!!.toString()
 
                     if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
-                        return@get
-                    }
-                    if (senderId <= 0) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "by can't be negative"))
                         return@get
                     }
 
@@ -118,17 +122,18 @@ class Main {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to state))
                         return@get
                     }
+
+                    if (!isUserIdCorrect(call.parameters["receiver"]!!)){
+                        call.respond(HttpStatusCode.BadRequest, USERID_INVALID)
+                        return@get
+                    }
+
                     val receiver = call.parameters["receiver"]!!.toInt()
                     val lastTime = call.parameters["last_time"]!!.toLong()
                     val token = call.parameters["token"].toString()
 
                     if(!isUserTokenExist(token)) {
                         call.respond(HttpStatusCode.Unauthorized, TOKEN_INCORRECT)
-                        return@get
-                    }
-
-                    if (receiver <= 0) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to true, "description" to "receiver can't be negative"))
                         return@get
                     }
 
@@ -228,15 +233,29 @@ class Main {
         }
         return ""
     }
+
+    private suspend fun isUserIdCorrect(userId: String): Boolean {
+        if (userId.toIntOrNull() == null || userId.toInt() <= 0)
+            return false
+        return !database.dbQuery {
+            Users.select { Users.id eq userId.toInt() }.empty()
+        }
+    }
+
+    fun stop() {
+        server.stop(200, 500)
+    }
 }
 
 fun main() {
-    Main().main()
+    val main = Main()
+    main.main()
     while (true) {
         val inp = readLine()
         if (inp == "stop") {
             println("Shutting down server...")
-            exitProcess(0)
+            main.stop()
+            return
         }
     }
 }

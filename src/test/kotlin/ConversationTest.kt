@@ -5,7 +5,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 class ConversationTest {
-    private fun createUser(): String = generateToken()
+    private fun createUser(): String = System.currentTimeMillis().toString()
     private lateinit var apiFirst: Api
     private lateinit var apiSecond: Api
 
@@ -24,7 +24,7 @@ class ConversationTest {
 
         val secondId = apiFirst.getUserId(userSecond)["id"].asInt
         val firstId = apiSecond.getUserId(userFirst)["id"].asInt
-        val randomMessage = generateToken()
+        val randomMessage = System.currentTimeMillis().toString()
         apiFirst.messageSend(secondId, randomMessage)
 
 

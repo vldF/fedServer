@@ -40,7 +40,7 @@ internal class MainTest {
     }
 
     private fun register() {
-        userName = generateToken()
+        userName = System.currentTimeMillis().toString() + "user"
 
         val resp = req.doGet("account.register", mapOf(
             "nick" to userName
@@ -60,7 +60,7 @@ internal class MainTest {
     }
 
     private fun messageSendAndGetLast() {
-        val rnd = generateToken()
+        val rnd = System.currentTimeMillis().toString()
         val respSend = req.doGet("messages.send", mapOf(
             "receiver" to userOptionalId,
             "message" to "test$rnd",
